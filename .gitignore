@@ -1,8 +1,28 @@
+# Virtual Environments
 venv/
+.venv/
+env/
+ENV/
+
+# Python Byte-Compiled Files
 __pycache__/
-*.pyc
-data/raw_pilot/
-data/packed_shards/*.bin
+*.py[cod]
+*$py.class
+*.so
+
+# Massive Raw Dumps & Shard Binaries (streamed directly to GCS)
 *.bin
+*.parquet
+*.jsonl
+data_pipeline_output/
+post_training_output/
+logs/
+checkpoints/
+tokenizer_output/sample_corpus.txt
+
+
+# OS and IDE Metadata
 .DS_Store
-sample_training_data.txt
+.idea/
+.vscode/
+*.swp

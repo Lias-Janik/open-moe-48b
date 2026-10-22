@@ -1,0 +1,19 @@
+{
+  "model_name": "open-moe-48b-tokenizer",
+  "vocab_size": 875,
+  "special_tokens": {
+    "<|endoftext|>": 0,
+    "<|im_start|>": 1,
+    "<|im_end|>": 2,
+    "<think>": 3,
+    "</think>": 4,
+    "<tool_call>": 5,
+    "</tool_call>": 6,
+    "<tool_response>": 7,
+    "</tool_response>": 8,
+    "<untrusted_content>": 9,
+    "</untrusted_content>": 10
+  },
+  "whitespace_preservation": true,
+  "byte_fallback": true
+}

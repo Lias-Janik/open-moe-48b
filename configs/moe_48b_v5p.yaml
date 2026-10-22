@@ -1,0 +1,83 @@
+# ==============================================================================
+# open-moe-48b: Google Cloud TPU v5p MaxText Production Configuration
+# Architecture: 48B Total Sparse MoE (~6.2B Active per Token, Top-2 Routing)
+# Target Hardware: Cloud TPU v5p Pod Slice (e.g., v5p-128 / v5p-256)
+# ==============================================================================
+
+# --- Model Identity & Base Architecture ---
+model_name: 'open_moe_48b'
+run_name: 'open-moe-48b-pretrain-v5p'
+
+# --- Dimensionality & Architecture Hyperparameters ---
+# Total Parameters: ~48B (Sparse MoE)
+# Active Parameters per Token: ~6.2B (Attention + 2 of 8 Routed Experts + Embeddings)
+base_emb_dim: 4096
+base_num_decoder_layers: 40
+base_num_query_heads: 32
+base_num_kv_heads: 8             # Grouped Query Attention (GQA) with 4:1 query-to-KV ratio
+head_dim: 128                    # 32 * 128 = 4096 hidden size
+base_mlp_dim: 7168               # Intermediate dimension per routed expert FFN
+vocab_size: 128000               # Matches BPE tokenizer vocab
+max_target_length: 8192          # Long-context pre-training window (8k tokens)
+
+# --- Mixture-of-Experts (MoE) Configuration ---
+moe_num_experts: 8               # 8 distinct routed experts per layer (can be scaled to 16)
+moe_num_selected_experts: 2      # Top-2 routing per token
+moe_capacity_factor: 1.25        # Buffer to avoid token dropping under expert skew
+routing_algorithm: 'top_k'       # Top-K softmax gated routing
+aux_loss_coef: 0.01              # Load balancing auxiliary loss coefficient
+cost_loss_weight: 0.01           # Switch-transformer style router load balancing
+
+# --- Activation & Attention Mechanisms ---
+use_swiglu: true                 # SwiGLU: Swish-gated linear unit
+activation_fn: 'silu'
+attention_type: 'gqa'
+rope_theta: 500000.0             # Extended base frequency for long context window
+rope_max_timescale: 500000.0
+
+# --- Numerical Precision & Quantization ---
+dtype: 'bfloat16'                # Compute precision optimized for TPU TensorCore
+weight_dtype: 'bfloat16'         # Master weight storage in bfloat16
+scan_layers: true                # Fast JAX scan compilation for transformer layers
+remat_policy: 'full'             # Activation rematerialization for memory optimization
+
+# --- Distributed Sharding & Mesh Strategies (TPU v5p-128 Slice) ---
+# Total ICI chips = 128 (e.g., 4x4x8 physical 3D torus)
+# Mesh: [data / fsdp, expert_parallel, tensor_parallel]
+ici_fsdp_parallelism: 16         # Fully Sharded Data Parallel across 16 ranks
+ici_expert_parallelism: 8        # Expert Parallelism: 1 expert slice per TPU core
+ici_tensor_parallelism: 1        # No intra-layer TP needed; FSDP + EP fits in 16GB HBM
+dcn_data_parallelism: 1          # Multi-slice data parallel across Datacenter Network
+
+# --- Optimization & Learning Rate Schedule ---
+optimizer: 'adamw'
+adam_b1: 0.9
+adam_b2: 0.95
+adam_eps: 1.0e-8
+weight_decay: 0.1
+learning_rate: 3.0e-4
+warmup_steps: 2000
+cosine_decay_steps: 250000
+min_learning_rate: 3.0e-5
+grad_clip_norm: 1.0
+
+# --- Checkpointing & Resilience ---
+checkpoint_period: 500           # Snapshot weights every 500 steps (~15-20 min)
+async_checkpointing: true        # Non-blocking async Orbax checkpointing
+save_checkpoint_dir: 'gs://<bucket_name>/checkpoints/open-moe-48b'
+load_checkpoint_dir: 'gs://<bucket_name>/checkpoints/open-moe-48b'
+load_parameters_path: ''         # Auto-populated by run_training.sh if checkpoint exists
+
+# --- Google Grain Data Input Pipeline ---
+dataset_type: 'grain'
+grain_train_files: 'gs://<bucket_name>/data_pipeline/grain_shards/*.bin'
+grain_index_files: 'gs://<bucket_name>/data_pipeline/grain_shards/*.idx'
+per_device_batch_size: 4         # Global batch = 4 * 16 (FSDP) * 8k seq = ~524,288 tokens/step
+grain_worker_count: 8            # Background async input threads
+grain_prefetch_buffer_size: 16
+
+# --- Logging & Telemetry ---
+log_period: 10
+enable_tensorboard: true
+tensorboard_dir: 'gs://<bucket_name>/tensorboard/open-moe-48b'
+metrics_file: 'moe_48b_training_metrics.jsonl'

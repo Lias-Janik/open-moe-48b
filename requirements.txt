@@ -1,0 +1,36 @@
+# ==============================================================================
+# open-moe-48b: Core Production Dependencies
+# Target Environment: Cloud TPU VM (v4/v5p) / Linux / macOS (Dev Control Plane)
+# ==============================================================================
+
+# --- Tokenization & Hugging Face Ecosystem ---
+tokenizers>=0.19.0
+datasets>=2.19.0
+tiktoken>=0.7.0
+
+# --- Scientific Computing & Numerical Libraries ---
+numpy>=1.26.0,<2.0.0
+scipy>=1.12.0
+
+# --- High-Performance Data Loading & Streaming (Google Grain) ---
+# Compatible with MaxText and TPU asynchronous input pipelines
+grain-python>=0.1.0
+
+# --- Storage, Serialization & Compressed Shards ---
+pyarrow>=15.0.0
+zstandard>=0.22.0
+smart-open>=7.0.0
+
+# --- AST Parsing & Syntax Verification ---
+tree-sitter>=0.21.0
+tree-sitter-python>=0.21.0
+
+# --- Cloud Storage & Distributed Telemetry ---
+google-cloud-storage>=2.14.0
+google-cloud-logging>=3.9.0
+
+# --- Deduplication, Hashing & Utilities ---
+xxhash>=3.4.1
+pyyaml>=6.0.1
+tqdm>=4.66.0
+packaging>=24.0
